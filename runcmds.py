@@ -1,15 +1,29 @@
 #!/usr/bin/python3
 
+import argparse
 import os
 import sys
 import time
 import datetime
 import paramiko
-import getpass
+from getpass import getpass
 
-host_file = "hosts"
-command_file = "commands"
-output_dir = "output/"
+def get_args():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-u", "--ssh-username", help = "SSH Username")
+    parser.add_argument("-c", "--command-file", help = "Command File", default = "commands")
+    parser.add_argument("--hosts-file", help = "Hosts File", default = "hosts")
+    parser.add_argument("-o", "--output-dir", help = "Output Directory", default = "output/")
+    parser.add_argument("-r", "--retries", help = "Number of retries", default = 3)
+    parser.add_argument("-t", "--timeout", help = "Absolute timeout in seconds", default = 30)
+    parser.add_argument("--threads", help = "Threads", default = 2)
+    args = parser.parse_args()
+    args_dict = args.__dict__
+    for key in args_dict.keys():
+        if args_dict[key] == None:
+            newvalue = input("Please specify " + key + ": ")
+            setattr(args, key, newvalue)
+    return args
 
 def read_file(filename):
     outlist = []
@@ -17,10 +31,6 @@ def read_file(filename):
         for line in file:
             outlist.append(line.strip())
     return outlist
-
-def usage():
-    usage = "python3 {} {{ssh_username}} {{ssh_password}}\n --or-- \npython3 {}".format(sys.argv[0], sys.argv[0])
-    return usage
 
 def run_commands(host, command_list, ssh_username, ssh_password):
     ssh = paramiko.SSHClient()
@@ -37,8 +47,15 @@ def run_commands(host, command_list, ssh_username, ssh_password):
     ssh.close()
     return output
 
-def main(host_file=host_file, command_file=command_file):
-    host_list = read_file(host_file)
+def main():
+    os.system('clear')
+    args = get_args()
+    ssh_username = args.ssh_username
+    command_file = args.command_file
+    hosts_file = args.hosts_file
+    output_dir = args.output_dir
+    ssh_password = getpass('Enter SSH password: ')
+    host_list = read_file(hosts_file)
     command_list = read_file(command_file)
     for host in host_list:
         print("Running commands on {}".format(host))
@@ -51,14 +68,4 @@ def main(host_file=host_file, command_file=command_file):
     return
 
 if __name__ == '__main__':
-    if len(sys.argv) == 1:
-        os.system('clear')
-        ssh_username = input('Enter SSH Username: ')
-        ssh_password = getpass.getpass('Enter SSH Password: ')
-        main()
-    elif len(sys.argv) == 3:
-        ssh_username = sys.argv[1]
-        ssh_password = sys.argv[2]
-        main()
-    else:
-        print(usage())
+    main()
